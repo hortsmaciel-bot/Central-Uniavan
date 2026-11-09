@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Central de Controle Anatômico</title>
+<meta name="description" content="Controle do acervo de peças, aulas práticas, anexos e depreciação das unidades do cliente.">
+<link rel="icon" type="image/png" href="logo-itc.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;600;700;800&family=Red+Hat+Text:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="brands">
+    <img class="itc-l" src="logo-itc.png" alt="ITC – Instituto de Treinamento em Cadáveres">
+    <img class="itc-d" src="logo-itc-escuro.png" alt="ITC – Instituto de Treinamento em Cadáveres">
+    <span class="sep" aria-hidden="true"></span>
+    <img class="idomed" src="logo-cliente.png" alt="Logo do cliente">
+  </div>
+  <h1>Central de Controle Anatômico <span id="marca-h1"></span></h1>
+  <div class="who" id="who" hidden><span class="ro-badge" id="ro-badge" hidden title="Você pode ver tudo, mas não alterar">Somente visualização</span><span class="sync" id="sync" title="Situação do salvamento na nuvem"><i></i><em id="sync-t">Conectado à nuvem</em></span><span id="who-mail"></span><button class="btn ghost sm" onclick="sair()">Sair</button></div>
+</div></header>
+
+<!-- ================= LOGIN ================= -->
+<section id="view-login" class="login wrap">
+  <form class="lcard" id="f-login" onsubmit="entrar(event)" novalidate hidden>
+    <div class="eyebrow">Acesso restrito</div>
+    <h2>Entrar na Central</h2>
+    <p class="lead">Use o e-mail e a senha cadastrados pela coordenação.</p>
+    <div class="field"><label for="lg-email">E-mail</label><input id="lg-email" type="email" autocomplete="username" placeholder="uniavanitc@gmail.com" required></div>
+    <div class="field"><label for="lg-senha">Senha</label><input id="lg-senha" type="password" autocomplete="current-password" required></div>
+    <div class="lerr" id="lg-err" role="alert" hidden></div>
+    <button class="btn green lbtn" id="lg-btn" type="submit">Entrar</button>
+    <button class="linkbtn" type="button" onclick="esqueci()">Esqueci minha senha</button>
+  </form>
+  <form class="lcard" id="f-nova" onsubmit="novaSenha(event)" hidden novalidate>
+    <div class="eyebrow">Redefinir senha</div>
+    <h2>Crie uma nova senha</h2>
+    <p class="lead">Mínimo de 8 caracteres.</p>
+    <div class="field"><label for="ns-s1">Nova senha</label><input id="ns-s1" type="password" autocomplete="new-password"></div>
+    <div class="field"><label for="ns-s2">Repita a nova senha</label><input id="ns-s2" type="password" autocomplete="new-password"></div>
+    <div class="lerr" id="nv-err" role="alert" hidden></div>
+    <button class="btn green lbtn" type="submit">Salvar nova senha</button>
+  </form>
+  <div class="lboot" id="lg-boot">Verificando acesso…</div>
+</section>
+
+<!-- ================= SELEÇÃO DE UNIDADE ================= -->
+<section id="view-units" class="units wrap" hidden>
+  <div class="eyebrow">Unidades</div>
+  <div class="units-h"><h2>Qual unidade você vai abrir?</h2><div class="acts-row ed-only"><a class="btn green" id="bk-drive" target="_blank" rel="noopener" hidden>Enviar backup para o Drive</a><button class="btn ghost" id="bk-btn" onclick="baixarBackup()">Baixar backup (Excel)</button></div></div>
+  <p class="lead">Cada unidade tem seu próprio acervo de peças, aulas, anexos e tipos de aula. Escolha uma para abrir.</p>
+  <div id="setup" class="setup" hidden></div>
+  <div class="ugrid" id="ugrid">
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+</section>
+
+<!-- ================= DENTRO DA UNIDADE ================= -->
+<div id="view-unit" hidden>
+  <div class="uband"><div class="wrap">
+    <div class="row1">
+      <button class="back" onclick="goUnits()" aria-label="Voltar para a lista de unidades">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Unidades
+      </button>
+      <h2 id="u-title"><small>Unidade</small><span id="u-name">—</span></h2>
+      <label class="switch" for="u-switch"><span>Trocar para</span><select id="u-switch" onchange="openUnit(this.value)"></select></label>
+    </div>
+    <nav class="tabs" aria-label="Seções da unidade">
+      <button class="active" data-tab="pecas">Peças</button>
+      <button data-tab="aulas">Aulas</button>
+      <button data-tab="cal">Calendário</button>
+      <button data-tab="anexos">Anexos</button>
+      <button data-tab="prem">Depreciação</button>
+      <button data-tab="rel">Relatórios</button>
+      <button data-tab="aval">Avaliações</button>
+      <button data-tab="hist">Histórico</button>
+    </nav>
+  </div></div>
+
+  <main class="wrap">
+
+    <!-- PEÇAS -->
+    <section class="tab active" id="tab-pecas">
+      <div class="shead">
+        <div><h3>Peças do acervo</h3><p>As peças ficam agrupadas pelo código original do corpo de onde vieram. Cada segmento é uma peça própria, com ficha, desgaste e link do Drive.</p></div>
+        <div class="acts-row">
+          <input id="pc-busca" type="search" placeholder="Buscar código, espécimen, local…" oninput="renderPecas()" aria-label="Buscar peça">
+          <button class="btn green" onclick="openPeca(null)">+ Nova peça</button>
+        </div>
+      </div>
+      <div class="chips" id="pc-resumo"></div>
+      <div class="tablewrap" id="w-pecas"></div>
+    </section>
+
+    <!-- AULAS -->
+    <section class="tab" id="tab-aulas">
+      <div class="shead"><div><h3>Aulas</h3><p>Registre cada dia de aula com as peças usadas. Informe o total de alunos da aula e, em cada peça, quantos trabalharam nela: a depreciação é o percentual do tipo de aula × alunos na peça.</p></div></div>
+
+      <div class="formcard daycard">
+        <h4 class="fc-title">Registrar dia de aula</h4>
+        <div class="frow">
+          <div class="field"><label for="ns-data">Data</label><input id="ns-data" type="date"></div>
+          <div class="field"><label for="ns-curso">Curso ou turma</label><input id="ns-curso" list="dl-curso" placeholder="ex.: MFT, IOA Goiânia"></div>
+          <div class="field"><label for="ns-resp">Responsável pelo registro</label><input id="ns-resp" list="dl-resp" placeholder="nome do funcionário"></div>
+          <div class="field"><label for="ns-alunos">Alunos na aula</label><input id="ns-alunos" type="number" min="1" step="1" placeholder="total de alunos"></div>
+          <div class="field"><label for="ns-obs">Observações</label><input id="ns-obs" placeholder="opcional"></div>
+        </div>
+        <div class="lines-h"><span>Peças usadas nesta aula</span></div>
+        <div id="ns-lines"></div>
+        <div class="lines-foot">
+          <button class="btn ghost sm" onclick="addLine()">+ Adicionar outra peça</button>
+          <div class="lines-total" id="ns-total"></div>
+          <button class="btn green" onclick="saveDia()">Salvar dia de aula</button>
+        </div>
+      </div>
+
+      <div id="w-aulas"></div>
+      <p class="foothint">Custo de cada peça = valor da peça × depreciação. Quando a peça chega a 100%, os usos seguintes não geram custo e aparecem marcados como esgotado.</p>
+    </section>
+
+    <!-- CALENDÁRIO -->
+    <section class="tab" id="tab-cal">
+      <div class="shead"><div><h3>Calendário</h3><p>Planejamento das aulas da unidade: data, horário, peças previstas e alunos previstos. É só organização interna: nada daqui entra nos custos, relatórios ou avaliações.</p></div>
+        <div class="acts-row"><button class="btn green" onclick="agAbrir(null)">+ Programar aula</button></div></div>
+      <div class="chips" id="cal-resumo"></div>
+      <div class="cal-wrap" id="cal-wrap">
+        <div class="cal-main">
+          <div class="cal-nav">
+            <button class="icon" onclick="calNav(-1)" aria-label="Mês anterior">‹</button>
+            <h4 id="cal-mes"></h4>
+            <button class="icon" onclick="calNav(1)" aria-label="Próximo mês">›</button>
+            <button class="btn ghost sm" onclick="calNav(0)">Hoje</button>
+            <span class="grow"></span>
+            <span class="cal-lg"><i class="programada"></i>Programada<i class="realizada"></i>Realizada<i class="cancelada"></i>Cancelada</span>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+        <aside class="cal-side">
+          <div class="cal-dia-h"><h4 id="cal-dia-t"></h4><button class="btn ghost sm" onclick="agAbrir(null,calDia)">+ Programar aula</button></div>
+          <div id="cal-dia"></div>
+          <h4 class="cal-px-t">Próximas aulas programadas</h4>
+          <div id="cal-prox"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ANEXOS -->
+    <section class="tab" id="tab-anexos">
+      <div class="shead"><div><h3>Anexos</h3><p>Planos de aula, documentos da unidade, notas fiscais e outros arquivos ou links ligados a esta unidade.</p></div></div>
+      <div class="formcard">
+        <div class="seg" role="tablist" aria-label="Tipo de anexo">
+          <button role="tab" class="on" id="ax-m-link" onclick="setAnexoMode('link')">Link</button>
+          <button role="tab" id="ax-m-arq" onclick="setAnexoMode('arquivo')">Arquivo do computador</button>
+        </div>
+        <div class="frow">
+          <div class="field"><label for="ax-titulo">Título</label><input id="ax-titulo" placeholder="ex.: Plano de aula – Anatomia do tórax"></div>
+          <div class="field"><label for="ax-cat">Categoria</label><select id="ax-cat"></select></div>
+          <div class="field" id="ax-f-link"><label for="ax-url">Endereço do link</label><input id="ax-url" type="url" placeholder="https://drive.google.com/…"></div>
+          <div class="field" id="ax-f-arq" hidden><label for="ax-file">Arquivo (até 50 MB)</label><input id="ax-file" type="file"></div>
+          <div class="field"><label for="ax-desc">Descrição</label><input id="ax-desc" placeholder="opcional"></div>
+          <div class="field"><button class="btn green" id="ax-btn" onclick="addAnexo()">Adicionar anexo</button></div>
+        </div>
+      </div>
+      <div class="chips" id="ax-filtros"></div>
+      <div id="w-anexos"></div>
+    </section>
+
+    <!-- DEPRECIAÇÃO -->
+    <section class="tab" id="tab-prem">
+      <div class="shead"><div><h3>Depreciação</h3><p>O percentual de depreciação por aluno de cada tipo de aula. Mudou um número, todos os custos recalculam.</p></div></div>
+      <div class="block">
+        <h3>Tipos de aula</h3>
+        <p>Uma peça usada por 10 alunos num tipo de aula que deprecia 0,5% por aluno perde 5% do seu valor.</p>
+        <div class="formcard"><div class="frow">
+          <div class="field"><label for="np-nome">Nome do tipo de aula</label><input id="np-nome" placeholder="ex.: Acesso venoso central"></div>
+          <div class="field"><label for="np-pct">Depreciação por aluno (%)</label><input id="np-pct" type="number" min="0" step="0.01" placeholder="ex.: 0,5"></div>
+          <div class="field"><label for="np-ideal">Desgaste ideal (%)</label><input id="np-ideal" type="number" min="1" max="100" step="1" value="100"></div>
+          <div class="field"><label for="np-desc">Descrição</label><input id="np-desc" placeholder="opcional"></div>
+          <div class="field"><button class="btn green" onclick="addProc()">Adicionar tipo</button></div>
+        </div></div>
+        <div class="tablewrap" id="w-procs"></div>
+        <p class="foothint">Desgaste ideal: até quanto do valor da peça esse tipo de aula deve consumir (100% = a peça inteira). Alunos até o desgaste ideal = desgaste ideal ÷ percentual por aluno: quantos alunos, só nesse tipo de aula, uma peça nova atende até chegar a esse limite.</p>
+      </div>
+      <div class="block">
+        <h3>Simulador</h3>
+        <p>Teste antes de lançar: escolha uma peça, um tipo de aula e o número de alunos.</p>
+        <div class="formcard"><div class="sim">
+          <div class="field"><label for="sim-corpo">Peça</label><select id="sim-corpo" onchange="renderSim()"></select></div>
+          <div class="field"><label for="sim-proc">Tipo de aula</label><select id="sim-proc" onchange="renderSim()"></select></div>
+          <div class="field"><label for="sim-alunos">Nº de alunos</label><input id="sim-alunos" type="number" min="1" step="1" value="10" oninput="renderSim()"></div>
+          <div class="out" id="sim-out"><b>—</b><span>escolha peça, tipo e alunos</span></div>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- RELATÓRIOS -->
+    <section class="tab" id="tab-rel">
+      <div class="shead"><div><h3>Relatórios</h3><p>Visão geral da unidade e o detalhamento dos usos de peças, com exportação para planilha.</p></div></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="grid2">
+        <div class="panel"><h4>Custo por dia de aula</h4><div class="cap">Soma do custo das peças usadas em cada dia.</div><div class="chart-box"><canvas id="c-time"></canvas></div></div>
+        <div class="panel"><h4>Custo depreciado por peça</h4><div class="cap">Quanto do valor de cada peça já virou custo de aula.</div><div class="chart-box"><canvas id="c-corpo"></canvas></div></div>
+        <div class="panel"><h4>Custo por mês</h4><div class="cap">Soma do custo das aulas em cada mês.</div><div class="chart-box"><canvas id="c-mes"></canvas></div></div>
+        <div class="panel"><h4>Custo por tipo de aula</h4><div class="cap">Soma do custo por tipo de aula.</div><div class="chart-box"><canvas id="c-proc"></canvas></div></div>
+      </div>
+      <div class="panel mt"><h4>Desgaste de cada peça</h4><div class="cap">Percentual do valor já consumido, incluindo o uso prévio. O teto é 100%.</div><div id="deprec-list"></div></div>
+
+      <div class="shead rel-h">
+        <div><h3>Usos de peças</h3><p>Filtre e exporte. Cada linha é uma peça usada num dia de aula.</p></div>
+        <div class="acts-row"><button class="btn ghost" onclick="exportCSV()">Exportar CSV</button><button class="btn ghost" onclick="window.print()">Imprimir</button></div>
+      </div>
+      <div class="toolbar">
+        <div class="field"><label for="f-corpo">Peça</label><select id="f-corpo" onchange="renderRel()"></select></div>
+        <div class="field"><label for="f-proc">Tipo de aula</label><select id="f-proc" onchange="renderRel()"></select></div>
+        <div class="field"><label for="f-resp">Responsável</label><select id="f-resp" onchange="renderRel()"></select></div>
+        <div class="field"><label for="f-de">De</label><input id="f-de" type="date" onchange="renderRel()"></div>
+        <div class="field"><label for="f-ate">Até</label><input id="f-ate" type="date" onchange="renderRel()"></div>
+        <div class="field"><button class="btn ghost sm" onclick="clearFilters()">Limpar filtros</button></div>
+      </div>
+      <div id="rel-kpis" class="kpis"></div>
+      <div class="tablewrap" id="w-rel"></div>
+    </section>
+    <!-- AVALIAÇÕES -->
+    <section class="tab" id="tab-aval">
+      <div class="shead av-ctrl"><div><h3>Avaliações dos alunos</h3><p>Quanto as aulas em cadáver fresco acrescentaram à formação médica, segundo os próprios alunos, ao lado do investimento em material anatômico por aluno.</p></div>
+        <div class="acts-row"><button class="btn ghost" onclick="exportRespostas()">Exportar respostas (CSV)</button><button class="btn green" onclick="imprimirRel()">Imprimir / salvar PDF</button></div></div>
+      <div class="toolbar av-ctrl">
+        <div class="field"><label for="av-sem">Semestre</label><select id="av-sem" onchange="renderAval()"></select></div>
+        <div class="field"><label for="av-esc">Abrangência</label><select id="av-esc" onchange="renderAval()"><option value="unidade">Esta unidade</option><option value="todas">Todas as unidades (relatório da faculdade)</option></select></div>
+        <div class="field"><button class="btn ghost sm" onclick="avAll=null;renderAval()">Atualizar dados</button></div>
+      </div>
+      <div id="av-rep"></div>
+      <div class="av-resp-wrap">
+        <div class="shead rel-h"><div><h3>Respostas</h3><p>Cada avaliação recebida no semestre escolhido.</p></div>
+          <div class="field"><label for="av-filtro">Mostrar</label><select id="av-filtro" onchange="renderAval()"><option value="">Todas</option><option value="c">Só com comentário</option><option value="p">Promotores (9–10)</option><option value="n">Neutros (7–8)</option><option value="d">Detratores (0–6)</option></select></div></div>
+        <div id="av-resp"></div>
+      </div>
+    </section>
+
+    <!-- HISTÓRICO -->
+    <section class="tab" id="tab-hist">
+      <div class="shead"><div><h3>Histórico</h3><p>Tudo o que foi feito nesta unidade, gravado automaticamente na nuvem: quem fez, quando e o que mudou.</p></div>
+        <div class="acts-row"><button class="btn ghost sm" onclick="loadHist()">Atualizar</button></div></div>
+      <div class="toolbar">
+        <div class="field"><label for="h-user">Pessoa</label><select id="h-user" onchange="renderHist()"></select></div>
+        <div class="field"><label for="h-tipo">Assunto</label><select id="h-tipo" onchange="renderHist()">
+          <option value="">Tudo</option><option value="cadaver_corpos">Peças</option><option value="aulas">Aulas</option><option value="cadaver_anexos">Anexos</option><option value="cadaver_procedimentos">Tipos de aula</option><option value="cadaver_agenda">Calendário</option><option value="cadaver_unidades">Unidade</option></select></div>
+        <div class="field"><label for="h-acao">Ação</label><select id="h-acao" onchange="renderHist()"><option value="">Todas</option><option value="criou">Criou</option><option value="alterou">Alterou</option><option value="excluiu">Excluiu</option></select></div>
+        <div class="field"><label for="h-busca">Buscar</label><input id="h-busca" type="search" placeholder="código, nome, valor…" oninput="renderHist()"></div>
+      </div>
+      <div id="w-hist"></div>
+      <div class="hmore"><button class="btn ghost sm" id="h-more" onclick="loadHist(true)" hidden>Carregar mais antigos</button></div>
+    </section>
+  </main>
+</div>
+
+<!-- ficha da peça -->
+<div id="pmodal" class="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pf-title">
+    <div class="sheet-h">
+      <div class="sheet-segimg" id="pf-segimg" hidden></div>
+      <div class="sheet-id">
+        <h2 id="pf-title">Nova peça</h2>
+        <div class="tags" id="pf-tags"></div>
+      </div>
+      <div class="ring-wrap" id="pf-ringwrap"><div class="ring ok" id="pf-ring" style="--p:0"><span id="pf-ringv">0%</span></div><small>Σ uso</small></div>
+      <button class="icon close" onclick="closePeca()" aria-label="Fechar">✕</button>
+    </div>
+    <div class="sec-t">Segmento</div>
+    <div class="segpick" id="pf-seg" role="radiogroup" aria-label="Segmento da peça"></div>
+    <div class="sec-t">Cadastro</div>
+    <div class="pgrid" id="pf-grid"></div>
+    <div class="sec-t">Links</div>
+    <div class="linkbox">
+      <div class="field"><label for="pf-link_drive">Pasta ou arquivo no Drive com os registros da peça</label>
+        <div class="row"><input id="pf-link_drive" type="url" placeholder="https://drive.google.com/drive/folders/…"><a id="pf-drive-open" class="btn ghost sm" target="_blank" rel="noopener" hidden>Abrir no Drive ↗</a></div>
+      </div>
+    </div>
+    <div id="pf-hist-wrap">
+      <div class="sec-t">Histórico de uso</div>
+      <div class="tablewrap" id="pf-hist"></div>
+    </div>
+    <div class="sheet-f">
+      <button class="btn ghost danger-t" id="pf-del" onclick="delCorpo(curPeca)">Excluir peça</button>
+      <span class="grow"></span>
+      <button class="btn ghost" onclick="closePeca()">Cancelar</button>
+      <button class="btn green" onclick="savePeca()">Salvar peça</button>
+    </div>
+  </div>
+</div>
+
+<!-- listas de sugestões -->
+<datalist id="dl-especime"></datalist><datalist id="dl-local"></datalist><datalist id="dl-proc"></datalist>
+<datalist id="dl-forn"></datalist><datalist id="dl-etnia"></datalist><datalist id="dl-resp"></datalist><datalist id="dl-curso"></datalist>
+
+<!-- aula programada -->
+<div id="agmodal" class="modal" hidden onclick="if(event.target===this)agFechar()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ag-title">
+    <div class="sheet-h"><div class="sheet-id"><h2 id="ag-title">Programar aula</h2><div class="tags"><span class="tag n">Planejamento · não entra nas estatísticas</span></div></div><button class="icon close" onclick="agFechar()" aria-label="Fechar">✕</button></div>
+    <div class="frow">
+      <div class="field"><label for="ag-data">Data</label><input id="ag-data" type="date"></div>
+      <div class="field"><label for="ag-ini">Início</label><input id="ag-ini" type="time"></div>
+      <div class="field"><label for="ag-fim">Término</label><input id="ag-fim" type="time"></div>
+      <div class="field"><label for="ag-status">Situação</label><select id="ag-status"><option value="programada">Programada</option><option value="realizada">Realizada</option><option value="cancelada">Cancelada</option></select></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label for="ag-curso">Curso ou turma</label><input id="ag-curso" list="dl-curso" placeholder="ex.: Anatomia Cirúrgica – 3º período"></div>
+      <div class="field"><label for="ag-alunos">Alunos previstos</label><input id="ag-alunos" type="number" min="0" step="1"></div>
+      <div class="field"><label for="ag-resp">Responsável previsto</label><input id="ag-resp" list="dl-resp" placeholder="opcional"></div>
+    </div>
+    <div class="sec-t">Tipos de prática previstos <span class="muted" id="ag-tn" style="text-transform:none;letter-spacing:0;font-weight:500"></span></div>
+    <div class="tpgrid" id="ag-procs" role="group" aria-label="Tipos de prática previstos"></div>
+    <div class="sec-t">Peças previstas <span class="muted" id="ag-pn" style="text-transform:none;letter-spacing:0;font-weight:500"></span></div>
+    <input id="ag-busca" type="search" placeholder="Buscar peça por código ou segmento" oninput="renderAgPecas()" aria-label="Buscar peça">
+    <div class="pkgrid" id="ag-pecas"></div>
+    <div class="field"><label for="ag-obs">Observações</label><input id="ag-obs" placeholder="opcional"></div>
+    <div class="sheet-f">
+      <button class="btn ghost danger-t" id="ag-del" onclick="agExcluir()">Excluir</button>
+      <span class="grow"></span>
+      <button class="btn ghost" onclick="agFechar()">Cancelar</button>
+      <button class="btn green" onclick="agSalvar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR Code da avaliação -->
+<div id="qmodal" class="modal" hidden onclick="if(event.target===this)fecharQR()">
+  <div class="qcard" role="dialog" aria-modal="true" aria-labelledby="q-title">
+    <button class="icon close qx" onclick="fecharQR()" aria-label="Fechar">✕</button>
+    <small id="q-unid"></small>
+    <h3 id="q-title"></h3>
+    <p class="q-ask">Avalie a aula: aponte a câmera do celular para o código</p>
+    <div class="q-box" id="q-box"></div>
+    <p class="q-status" id="q-status"></p>
+    <div class="q-link"><input id="q-url" readonly aria-label="Link da avaliação" onclick="this.select()"><button class="btn ghost sm" onclick="copiarLink()">Copiar link</button><button class="btn green sm" id="q-pdf" onclick="baixarQRpdf()">Baixar PDF</button><a class="btn ghost sm" id="q-open" target="_blank" rel="noopener">Abrir ↗</a></div>
+    <div class="q-act" id="q-act"></div>
+  </div>
+</div>
+
+<!-- confirmação -->
+<div id="modal" class="modal top" hidden>
+  <div class="mcard" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <h3 id="m-title"></h3>
+    <p id="m-body"></p>
+    <div class="field" id="m-type" hidden><label for="m-input">Digite <b id="m-name"></b> para confirmar</label><input id="m-input" autocomplete="off"></div>
+    <div class="acts"><button class="btn ghost" id="m-cancel">Cancelar</button><button class="btn danger" id="m-ok">Excluir</button></div>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
