@@ -16,4 +16,4 @@ const MARCA = {
 };
 
 // 3) Opcional: link do botão "Enviar backup para o Drive" (veja backup-google-drive/LEIA-ME-BACKUP.md)
-const BACKUP_DRIVE_URL = 'https://script.google.com/macros/s/AKfycbzJAUKl1hp2qs-u2OvQAAvcUcbBiBW8URLm0wwnVOZk8atHOVXtPwXPn7ZYgIoZ2BNg3A/exec';
+const BACKUP_DRIVE_URL = 'https://script.google.com/macros/s/AKfycbxZ9QcDKbSJFYkGp3iLG-bhTMkcjI-47h6sUg2TJirt/dev?chave=173564864b6142f1b495ca88841eff3a';
